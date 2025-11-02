@@ -1,0 +1,44 @@
+{
+  "name": "shopvault",
+  "version": "1.0.0",
+  "description": "E-Commerce Product Inventory Management System using MongoDB",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "seed": "node src/seeds/seedDatabase.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
+  },
+  "keywords": [
+    "mongodb",
+    "ecommerce",
+    "inventory",
+    "cli",
+    "nodejs"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "chalk": "^4.1.2",
+    "cli-table3": "^0.6.3",
+    "commander": "^11.1.0",
+    "dayjs": "^1.11.10",
+    "dotenv": "^16.3.1",
+    "figlet": "^1.7.0",
+    "inquirer": "^8.2.6",
+    "joi": "^17.11.0",
+    "lodash": "^4.17.21",
+    "mongodb": "^6.3.0",
+    "ora": "^5.4.1"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "nodemon": "^3.0.2"
+  }
+}
