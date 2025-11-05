@@ -228,18 +228,20 @@ class BaseRepository {
         }
       };
       
+      // MongoDB driver v6+ returns the document directly, not wrapped in .value
       const result = await collection.findOneAndUpdate(
         { _id: objectId },
         updateDoc,
         { returnDocument: 'after' }
       );
       
-      if (!result.value) {
+      // In MongoDB Node Driver 6.x, the result is the document itself
+      if (!result) {
         return null;
       }
       
       logger.debug(`Updated document in ${this.collectionName}: ${id}`);
-      return result.value;
+      return result;
     } catch (error) {
       logger.error(`Error updating by ID in ${this.collectionName}:`, error);
       throw parseMongoError(error);

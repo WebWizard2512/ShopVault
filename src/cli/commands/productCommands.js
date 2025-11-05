@@ -18,6 +18,90 @@ const { PRODUCT_STATUS } = require('../../config/constants');
 
 class ProductCommands {
   /**
+   * List all products with IDs visible
+   */
+  async listAllProducts() {
+    try {
+      display.clearScreen();
+      console.log(chalk.cyan('\n╔══════════════════════════════════════════════════════════════════════╗'));
+      console.log(chalk.cyan('║') + chalk.bold.white('  ALL PRODUCTS'.padEnd(68)) + chalk.cyan('║'));
+      console.log(chalk.cyan('╚══════════════════════════════════════════════════════════════════════╝\n'));
+
+      const spinner = display.showLoading('Loading all products...');
+      const result = await productService.searchProducts({ limit: 100 });
+      spinner.stop();
+
+      if (result.total === 0) {
+        display.displayWarning('No products found. Run "npm run seed" to add sample data.');
+        return;
+      }
+
+      // Display with full IDs visible
+      const Table = require('cli-table3');
+      const table = new Table({
+        head: [
+          chalk.cyan('MongoDB ID'),
+          chalk.cyan('SKU'),
+          chalk.cyan('Name'),
+          chalk.cyan('Price'),
+          chalk.cyan('Stock'),
+          chalk.cyan('Status')
+        ],
+        colWidths: [28, 18, 30, 12, 10, 15],
+        wordWrap: true
+      });
+
+      result.products.forEach(product => {
+        const stockColor = product.inventory.available === 0 ? chalk.red :
+                          product.inventory.available < 10 ? chalk.yellow :
+                          chalk.green;
+
+        const statusColor = product.status === 'AVAILABLE' ? chalk.green :
+                           product.status === 'OUT_OF_STOCK' ? chalk.red :
+                           chalk.yellow;
+
+        table.push([
+          chalk.gray(product._id.toString()),
+          chalk.white(product.sku),
+          chalk.white(product.name.substring(0, 28)),
+          chalk.green(`${product.price.toFixed(2)}`),
+          stockColor(product.inventory.available.toString()),
+          statusColor(product.status)
+        ]);
+      });
+
+      console.log(table.toString() + '\n');
+      console.log(chalk.gray(`  Total: ${result.total} products\n`));
+
+      // Ask if user wants to view details
+      const { viewDetails } = await inquirer.prompt([{
+        type: 'confirm',
+        name: 'viewDetails',
+        message: 'View a product details?',
+        default: false
+      }]);
+
+      if (viewDetails) {
+        const { productId } = await inquirer.prompt([{
+          type: 'input',
+          name: 'productId',
+          message: 'Enter Product ID (copy from above):',
+          validate: input => input.length > 0 || 'Product ID is required'
+        }]);
+
+        const spinner2 = display.showLoading('Loading product...');
+        const product = await productService.getProductById(productId);
+        spinner2.stop();
+
+        display.displayProductDetails(product);
+      }
+
+    } catch (error) {
+      display.displayError(error.message);
+    }
+  }
+
+  /**
    * Create new product
    */
   async createProduct() {
@@ -135,20 +219,22 @@ class ProductCommands {
         {
           type: 'input',
           name: 'query',
-          message: 'Search query (name, description):',
+          message: 'Search query (name, description, tags):',
           default: ''
         },
         {
-          type: 'number',
+          type: 'input',
           name: 'minPrice',
-          message: 'Minimum price (leave empty to skip):',
-          default: null
+          message: 'Minimum price (press Enter to skip):',
+          default: '',
+          filter: input => input === '' ? null : parseFloat(input)
         },
         {
-          type: 'number',
+          type: 'input',
           name: 'maxPrice',
-          message: 'Maximum price (leave empty to skip):',
-          default: null
+          message: 'Maximum price (press Enter to skip):',
+          default: '',
+          filter: input => input === '' ? null : parseFloat(input)
         },
         {
           type: 'list',
@@ -167,8 +253,32 @@ class ProductCommands {
         }
       ]);
 
+      // Build search parameters
+      const searchParams = {
+        limit: answers.limit || 10,
+        page: 1
+      };
+
+      // Only add query if not empty
+      if (answers.query && answers.query.trim() !== '') {
+        searchParams.query = answers.query.trim();
+      }
+
+      // Only add price filters if provided
+      if (answers.minPrice !== null && !isNaN(answers.minPrice)) {
+        searchParams.minPrice = answers.minPrice;
+      }
+      if (answers.maxPrice !== null && !isNaN(answers.maxPrice)) {
+        searchParams.maxPrice = answers.maxPrice;
+      }
+
+      // Only add status filter if not "All"
+      if (answers.status) {
+        searchParams.status = answers.status;
+      }
+
       const spinner = display.showLoading('Searching...');
-      const result = await productService.searchProducts(answers);
+      const result = await productService.searchProducts(searchParams);
       spinner.stop();
 
       display.displaySearchResults(result);

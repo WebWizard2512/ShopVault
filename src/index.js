@@ -1,9 +1,3 @@
-/**
- * ShopVault - Main Entry Point
- * 
- * This is where everything starts!
- */
-
 require('dotenv').config();
 const figlet = require('figlet');
 const chalk = require('chalk');

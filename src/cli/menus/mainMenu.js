@@ -1,6 +1,6 @@
 /**
- * Main Menu - CLI Entry Point
- * Fixed for Inquirer v9+
+ * Main Menu - FINAL FIXED VERSION
+ * No more flickering!
  */
 
 const inquirer = require('inquirer');
@@ -11,7 +11,7 @@ const display = require('../helpers/display');
 
 class MainMenu {
   /**
-   * Display banner
+   * Display banner (only once)
    */
   displayBanner() {
     console.clear();
@@ -33,33 +33,53 @@ class MainMenu {
   /**
    * Show main menu
    */
-  async show() {
-    this.displayBanner();
+  async show(firstTime = false) {
+    // Only show full banner first time
+    if (firstTime) {
+      this.displayBanner();
+    }
+    // Don't clear screen on subsequent calls to prevent flicker
 
     const choices = [
       chalk.cyan('━━━ PRODUCT MANAGEMENT ━━━'),
       { name: '  📦 Create New Product', value: 'create_product' },
+      { name: '  📋 List All Products', value: 'list_products' },
       { name: '  🔍 Search Products', value: 'search_products' },
       { name: '  👁️  View Product Details', value: 'view_product' },
       { name: '  ✏️  Update Product', value: 'update_product' },
       { name: '  🗑️  Delete Product', value: 'delete_product' },
-      { name: '', value: 'separator1', disabled: true },
+      { name: ' ', disabled: true },
+      
+      chalk.cyan('━━━ USER & WISHLIST ━━━'),
+      { name: '  👤 Create User', value: 'create_user' },
+      { name: '  👥 List Users', value: 'list_users' },
+      { name: '  👁️  View User', value: 'view_user' },
+      { name: '  ❤️  Manage Wishlist', value: 'manage_wishlist' },
+      { name: ' ', disabled: true },
+      
+      chalk.cyan('━━━ ORDER MANAGEMENT ━━━'),
+      { name: '  🛒 Create Order', value: 'create_order' },
+      { name: '  📦 List Orders', value: 'list_orders' },
+      { name: '  🔍 View Order', value: 'view_order' },
+      { name: '  ✏️  Update Order Status', value: 'update_order_status' },
+      { name: '  ❌ Cancel Order', value: 'cancel_order' },
+      { name: ' ', disabled: true },
       
       chalk.cyan('━━━ INVENTORY MANAGEMENT ━━━'),
       { name: '  📊 Manage Inventory', value: 'manage_inventory' },
       { name: '  ⚠️  Low Stock Alert', value: 'low_stock' },
       { name: '  📉 Out of Stock Products', value: 'out_of_stock' },
-      { name: '', value: 'separator2', disabled: true },
+      { name: ' ', disabled: true },
       
       chalk.cyan('━━━ ANALYTICS & REPORTS ━━━'),
       { name: '  🏆 Top Selling Products', value: 'top_sellers' },
       { name: '  📈 Product Statistics', value: 'statistics' },
-      { name: '', value: 'separator3', disabled: true },
+      { name: ' ', disabled: true },
       
       chalk.cyan('━━━ CATEGORY MANAGEMENT ━━━'),
       { name: '  📁 View Categories', value: 'view_categories' },
       { name: '  🌳 Category Tree', value: 'category_tree' },
-      { name: '', value: 'separator4', disabled: true },
+      { name: ' ', disabled: true },
       
       chalk.cyan('━━━ SYSTEM ━━━'),
       { name: '  🌱 Seed Database', value: 'seed_database' },
@@ -71,9 +91,9 @@ class MainMenu {
       {
         type: 'list',
         name: 'action',
-        message: 'What would you like to do?',
+        message: chalk.bold('What would you like to do?'),
         choices: choices,
-        pageSize: 25,
+        pageSize: 15,
         loop: false
       }
     ]);
@@ -86,14 +106,13 @@ class MainMenu {
    */
   async handleAction(action) {
     try {
-      // Skip disabled separators
-      if (action.startsWith('separator')) {
-        return true;
-      }
-
       switch (action) {
         case 'create_product':
           await productCommands.createProduct();
+          break;
+
+        case 'list_products':
+          await productCommands.listAllProducts();
           break;
 
         case 'search_products':
@@ -156,11 +175,18 @@ class MainMenu {
       }
 
       await display.pause();
+      
+      // Clear for next menu display
+      console.clear();
+      console.log(chalk.cyan('\n━━━ ShopVault ━━━\n'));
+      
       return true; // Continue menu loop
 
     } catch (error) {
       display.displayError(error.message);
       await display.pause();
+      console.clear();
+      console.log(chalk.cyan('\n━━━ ShopVault ━━━\n'));
       return true;
     }
   }
@@ -277,9 +303,11 @@ class MainMenu {
    */
   async run() {
     let keepRunning = true;
+    let firstTime = true;
 
     while (keepRunning) {
-      const action = await this.show();
+      const action = await this.show(firstTime);
+      firstTime = false;
       keepRunning = await this.handleAction(action);
     }
 
