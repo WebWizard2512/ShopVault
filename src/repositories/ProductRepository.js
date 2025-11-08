@@ -253,57 +253,68 @@ class ProductRepository extends BaseRepository {
     }
   }
 
-  /**
-   * Update Product Inventory
-   * LEARNING: This uses atomic operations to prevent race conditions!
-   * 
-   * @param {string} productId
-   * @param {number} quantityChange - Positive to add, negative to reduce
-   */
-  async updateInventory(productId, quantityChange) {
-    try {
-      const collection = this.getCollection();
-      const objectId = this.toObjectId(productId);
+/**
+ * Update Product Inventory - ATOMIC OPERATION
+ * @param {string} productId
+ * @param {number} quantityChange - Positive to add, negative to reduce
+ */
+async updateInventory(productId, quantityChange) {
+  try {
+    const collection = this.getCollection();
+    const objectId = this.toObjectId(productId);
 
-      // Atomic operation: increment quantity and recalculate available
-      const result = await collection.findOneAndUpdate(
-        { _id: objectId },
+    // SINGLE ATOMIC OPERATION - All changes in one update
+    const result = await collection.findOneAndUpdate(
+      { _id: objectId },
+      [
         {
-          $inc: { 'inventory.quantity': quantityChange },
-          $set: { updatedAt: new Date() }
-        },
-        { returnDocument: 'after' }
-      );
+          $set: {
+            // Increment quantity
+            'inventory.quantity': { $add: ['$inventory.quantity', quantityChange] },
+            // Recalculate available = quantity - reserved
+            'inventory.available': {
+              $subtract: [
+                { $add: ['$inventory.quantity', quantityChange] },
+                '$inventory.reserved'
+              ]
+            },
+            // Update status based on new available stock
+            status: {
+              $cond: {
+                if: {
+                  $lte: [
+                    {
+                      $subtract: [
+                        { $add: ['$inventory.quantity', quantityChange] },
+                        '$inventory.reserved'
+                      ]
+                    },
+                    0
+                  ]
+                },
+                then: 'OUT_OF_STOCK',
+                else: 'AVAILABLE'
+              }
+            },
+            updatedAt: new Date()
+          }
+        }
+      ],
+      { returnDocument: 'after' }
+    );
 
-      if (!result.value) {
-        return null;
-      }
-
-      // Recalculate available = quantity - reserved
-      const product = result.value;
-      const available = Math.max(0, product.inventory.quantity - product.inventory.reserved);
-
-      await collection.updateOne(
-        { _id: objectId },
-        { $set: { 'inventory.available': available } }
-      );
-
-      // Update status based on availability
-      const newStatus = available === 0 
-        ? PRODUCT_STATUS.OUT_OF_STOCK 
-        : PRODUCT_STATUS.AVAILABLE;
-
-      await collection.updateOne(
-        { _id: objectId },
-        { $set: { status: newStatus } }
-      );
-
-      return await this.findById(productId);
-    } catch (error) {
-      logger.error('Error updating inventory:', error);
-      throw error;
+    if (!result) {
+      return null;
     }
+
+    logger.debug(`Inventory updated atomically for product: ${productId}`);
+    return result;
+
+  } catch (error) {
+    logger.error('Error updating inventory:', error);
+    throw error;
   }
+}
 
   /**
    * Reserve Inventory for Order

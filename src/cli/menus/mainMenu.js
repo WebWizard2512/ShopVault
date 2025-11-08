@@ -1,12 +1,15 @@
 /**
- * Main Menu - FINAL FIXED VERSION
- * No more flickering!
+ * Main Menu - COMPLETE FIXED VERSION
+ * All handlers implemented, no missing features
  */
 
 const inquirer = require('inquirer');
 const chalk = require('chalk');
 const figlet = require('figlet');
 const productCommands = require('../commands/productCommands');
+const orderCommands = require('../commands/orderCommands');
+const userCommands = require('../commands/userCommands');
+const analyticsCommands = require('../commands/analyticsCommands');
 const display = require('../helpers/display');
 
 class MainMenu {
@@ -34,11 +37,9 @@ class MainMenu {
    * Show main menu
    */
   async show(firstTime = false) {
-    // Only show full banner first time
     if (firstTime) {
       this.displayBanner();
     }
-    // Don't clear screen on subsequent calls to prevent flicker
 
     const choices = [
       chalk.cyan('━━━ PRODUCT MANAGEMENT ━━━'),
@@ -55,6 +56,7 @@ class MainMenu {
       { name: '  👥 List Users', value: 'list_users' },
       { name: '  👁️  View User', value: 'view_user' },
       { name: '  ❤️  Manage Wishlist', value: 'manage_wishlist' },
+      { name: '  📊 User Statistics', value: 'user_stats' },
       { name: ' ', disabled: true },
       
       chalk.cyan('━━━ ORDER MANAGEMENT ━━━'),
@@ -63,6 +65,7 @@ class MainMenu {
       { name: '  🔍 View Order', value: 'view_order' },
       { name: '  ✏️  Update Order Status', value: 'update_order_status' },
       { name: '  ❌ Cancel Order', value: 'cancel_order' },
+      { name: '  📊 Order Statistics', value: 'order_stats' },
       { name: ' ', disabled: true },
       
       chalk.cyan('━━━ INVENTORY MANAGEMENT ━━━'),
@@ -72,6 +75,14 @@ class MainMenu {
       { name: ' ', disabled: true },
       
       chalk.cyan('━━━ ANALYTICS & REPORTS ━━━'),
+      { name: '  📊 Dashboard Summary', value: 'dashboard' },
+      { name: '  📈 Sales Report', value: 'sales_report' },
+      { name: '  📁 Category Performance', value: 'category_performance' },
+      { name: '  👥 Customer Analytics', value: 'customer_analytics' },
+      { name: '  💰 Inventory Value', value: 'inventory_value' },
+      { name: '  📈 Revenue Trends', value: 'revenue_trends' },
+      { name: '  🔄 Inventory Turnover', value: 'inventory_turnover' },
+      { name: '  📊 Order Distribution', value: 'order_distribution' },
       { name: '  🏆 Top Selling Products', value: 'top_sellers' },
       { name: '  📈 Product Statistics', value: 'statistics' },
       { name: ' ', disabled: true },
@@ -93,7 +104,7 @@ class MainMenu {
         name: 'action',
         message: chalk.bold('What would you like to do?'),
         choices: choices,
-        pageSize: 15,
+        pageSize: 20,
         loop: false
       }
     ]);
@@ -107,83 +118,138 @@ class MainMenu {
   async handleAction(action) {
     try {
       switch (action) {
+        // PRODUCT MANAGEMENT
         case 'create_product':
           await productCommands.createProduct();
           break;
-
         case 'list_products':
           await productCommands.listAllProducts();
           break;
-
         case 'search_products':
           await productCommands.searchProducts();
           break;
-
         case 'view_product':
           await productCommands.viewProduct();
           break;
-
         case 'update_product':
           await productCommands.updateProduct();
           break;
-
         case 'delete_product':
           await productCommands.deleteProduct();
           break;
 
+        // USER MANAGEMENT
+        case 'create_user':
+          await userCommands.createUser();
+          break;
+        case 'list_users':
+          await userCommands.listUsers();
+          break;
+        case 'view_user':
+          await userCommands.viewUser();
+          break;
+        case 'manage_wishlist':
+          await userCommands.manageWishlist();
+          break;
+        case 'user_stats':
+          await userCommands.viewUserStats();
+          break;
+
+        // ORDER MANAGEMENT
+        case 'create_order':
+          await orderCommands.createOrder();
+          break;
+        case 'list_orders':
+          await orderCommands.listOrders();
+          break;
+        case 'view_order':
+          await orderCommands.viewOrder();
+          break;
+        case 'update_order_status':
+          await orderCommands.updateOrderStatus();
+          break;
+        case 'cancel_order':
+          await orderCommands.cancelOrder();
+          break;
+        case 'order_stats':
+          await orderCommands.viewOrderStats();
+          break;
+
+        // INVENTORY MANAGEMENT
         case 'manage_inventory':
           await productCommands.manageInventory();
           break;
-
         case 'low_stock':
           await productCommands.viewLowStock();
           break;
-
         case 'out_of_stock':
           await this.viewOutOfStock();
           break;
 
+        // ANALYTICS & REPORTS
+        case 'dashboard':
+          await analyticsCommands.viewDashboard();
+          break;
+        case 'sales_report':
+          await analyticsCommands.viewSalesReport();
+          break;
+        case 'category_performance':
+          await analyticsCommands.viewCategoryPerformance();
+          break;
+        case 'customer_analytics':
+          await analyticsCommands.viewCustomerAnalytics();
+          break;
+        case 'inventory_value':
+          await analyticsCommands.viewInventoryValue();
+          break;
+        case 'revenue_trends':
+          await analyticsCommands.viewRevenueTrends();
+          break;
+        case 'inventory_turnover':
+          await analyticsCommands.viewInventoryTurnover();
+          break;
+        case 'order_distribution':
+          await analyticsCommands.viewOrderStatusDistribution();
+          break;
         case 'top_sellers':
           await productCommands.viewTopSellers();
           break;
-
         case 'statistics':
           await productCommands.viewStatistics();
           break;
 
+        // CATEGORY MANAGEMENT
         case 'view_categories':
           await this.viewCategories();
           break;
-
         case 'category_tree':
           await this.viewCategoryTree();
           break;
 
+        // SYSTEM
         case 'seed_database':
           await this.seedDatabase();
           break;
-
         case 'about':
           await this.showAbout();
           break;
-
         case 'exit':
-          return false; // Signal to exit
+          return false;
 
         default:
-          display.displayWarning('Feature coming soon!');
+          display.displayWarning('Feature not implemented yet!');
       }
 
       await display.pause();
-      
-      // Clear for next menu display
       console.clear();
       console.log(chalk.cyan('\n━━━ ShopVault ━━━\n'));
-      
-      return true; // Continue menu loop
+      return true;
 
     } catch (error) {
       display.displayError(error.message);
+      if (process.env.NODE_ENV === 'development' && error.stack) {
+        console.log(chalk.gray(error.stack));
+      }
       await display.pause();
       console.clear();
       console.log(chalk.cyan('\n━━━ ShopVault ━━━\n'));
@@ -295,7 +361,7 @@ class MainMenu {
     console.log(chalk.white('    ✓ Atomic operations'));
     console.log(chalk.white('    ✓ Embedded vs Referenced data'));
     console.log('');
-    console.log(chalk.cyan('  Made with ❤️  and 20+ years of MongoDB expertise\n'));
+    console.log(chalk.cyan('  Made with ❤️  and MongoDB expertise\n'));
   }
 
   /**

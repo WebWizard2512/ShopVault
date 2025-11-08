@@ -159,21 +159,29 @@ class DatabaseManager {
   }
 
   /**
-   * Close database connection gracefully
-   */
-  async disconnect() {
-    try {
-      if (this.client && this.isConnected) {
-        await this.client.close();
-        this.isConnected = false;
-        this.db = null;
-        logger.info('Disconnected from MongoDB');
-      }
-    } catch (error) {
-      logger.error(`Error disconnecting: ${error.message}`);
-      throw error;
+ * Close database connection gracefully
+ */
+async disconnect() {
+  try {
+    if (this.client && this.isConnected) {
+      // CRITICAL FIX: Remove all event listeners before closing
+      this.client.removeAllListeners('connectionPoolCreated');
+      this.client.removeAllListeners('connectionCreated');
+      this.client.removeAllListeners('connectionClosed');
+      this.client.removeAllListeners('error');
+      this.client.removeAllListeners('timeout');
+
+      await this.client.close();
+      this.isConnected = false;
+      this.db = null;
+      this.client = null;
+      logger.info('Disconnected from MongoDB');
     }
+  } catch (error) {
+    logger.error(`Error disconnecting: ${error.message}`);
+    throw error;
   }
+}
 
   /**
    * Utility: Sleep function for retry logic

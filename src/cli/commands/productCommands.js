@@ -14,6 +14,7 @@ const productService = require('../../services/ProductService');
 const categoryService = require('../../services/CategoryService');
 const display = require('../helpers/display');
 const logger = require('../../utils/logger');
+const chalk = require('chalk');
 const { PRODUCT_STATUS } = require('../../config/constants');
 
 class ProductCommands {
@@ -632,5 +633,4 @@ class ProductCommands {
   }
 }
 
-const chalk = require('chalk');
 module.exports = new ProductCommands();
