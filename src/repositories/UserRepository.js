@@ -1,7 +1,3 @@
-/**
- * User Repository
- */
-
 const BaseRepository = require('./BaseRepository');
 const { COLLECTIONS } = require('../config/constants');
 const logger = require('../utils/logger');
@@ -11,9 +7,6 @@ class UserRepository extends BaseRepository {
     super(COLLECTIONS.USERS);
   }
 
-  /**
-   * Find user by email
-   */
   async findByEmail(email) {
     try {
       return await this.findOne({ email: email.toLowerCase() });
@@ -23,9 +16,6 @@ class UserRepository extends BaseRepository {
     }
   }
 
-  /**
-   * Add product to wishlist
-   */
   async addToWishlist(userId, productId) {
     try {
       const collection = this.getCollection();
@@ -50,9 +40,6 @@ class UserRepository extends BaseRepository {
     }
   }
 
-  /**
-   * Remove product from wishlist
-   */
   async removeFromWishlist(userId, productId) {
     try {
       const collection = this.getCollection();
@@ -73,18 +60,11 @@ class UserRepository extends BaseRepository {
     }
   }
 
-  /**
-   * Get user wishlist with product details
-   */
   async getWishlistWithProducts(userId) {
     try {
       const pipeline = [
-        {
-          $match: { _id: this.toObjectId(userId) }
-        },
-        {
-          $unwind: '$wishlist'
-        },
+        { $match: { _id: this.toObjectId(userId) } },
+        { $unwind: '$wishlist' },
         {
           $lookup: {
             from: COLLECTIONS.PRODUCTS,
@@ -93,9 +73,7 @@ class UserRepository extends BaseRepository {
             as: 'product'
           }
         },
-        {
-          $unwind: '$product'
-        },
+        { $unwind: '$product' },
         {
           $project: {
             productId: '$wishlist.productId',

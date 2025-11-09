@@ -1,14 +1,3 @@
-/**
- * Order Repository
- * 
- * LEARNING NOTES - ORDER QUERIES:
- * Orders are time-series data:
- * - Index on createdAt for date ranges
- * - Index on userId for user history
- * - Compound index on status + date for filtering
- * - Aggregation for revenue calculations
- */
-
 const BaseRepository = require('./BaseRepository');
 const { COLLECTIONS, ORDER_STATUS } = require('../config/constants');
 const { ObjectId } = require('mongodb');
@@ -19,9 +8,6 @@ class OrderRepository extends BaseRepository {
     super(COLLECTIONS.ORDERS);
   }
 
-  /**
-   * Find order by order number
-   */
   async findByOrderNumber(orderNumber) {
     try {
       return await this.findOne({ orderNumber: orderNumber.toUpperCase() });
@@ -31,15 +17,9 @@ class OrderRepository extends BaseRepository {
     }
   }
 
-  /**
-   * Get orders by user
-   */
   async getOrdersByUser(userId, options = {}) {
     try {
-      const filter = {
-        userId: this.toObjectId(userId)
-      };
-
+      const filter = { userId: this.toObjectId(userId) };
       const { sort = { createdAt: -1 }, limit = 10, skip = 0 } = options;
 
       return await this.findMany(filter, { sort, limit, skip });
@@ -49,9 +29,6 @@ class OrderRepository extends BaseRepository {
     }
   }
 
-  /**
-   * Get orders by status
-   */
   async getOrdersByStatus(status, options = {}) {
     try {
       const filter = { status };
@@ -64,9 +41,6 @@ class OrderRepository extends BaseRepository {
     }
   }
 
-  /**
-   * Search orders with filters
-   */
   async searchOrders(filters = {}) {
     try {
       const {
@@ -85,14 +59,12 @@ class OrderRepository extends BaseRepository {
       if (userId) query.userId = this.toObjectId(userId);
       if (status) query.status = status;
 
-      // Date range
       if (startDate || endDate) {
         query.createdAt = {};
         if (startDate) query.createdAt.$gte = new Date(startDate);
         if (endDate) query.createdAt.$lte = new Date(endDate);
       }
 
-      // Price range
       if (minTotal || maxTotal) {
         query['pricing.total'] = {};
         if (minTotal) query['pricing.total'].$gte = minTotal;
@@ -121,56 +93,6 @@ class OrderRepository extends BaseRepository {
     }
   }
 
-  /**
-   * Get orders with user details (aggregation)
-   */
-  async getOrdersWithUserDetails(filter = {}, options = {}) {
-    try {
-      const { limit = 10, skip = 0 } = options;
-
-      const pipeline = [
-        { $match: filter },
-        {
-          $lookup: {
-            from: COLLECTIONS.USERS,
-            localField: 'userId',
-            foreignField: '_id',
-            as: 'userDetails'
-          }
-        },
-        {
-          $unwind: {
-            path: '$userDetails',
-            preserveNullAndEmptyArrays: true
-          }
-        },
-        { $sort: { createdAt: -1 } },
-        { $skip: skip },
-        { $limit: limit },
-        {
-          $project: {
-            orderNumber: 1,
-            status: 1,
-            'pricing.total': 1,
-            createdAt: 1,
-            'customer.email': 1,
-            'userDetails.firstName': 1,
-            'userDetails.lastName': 1,
-            'userDetails.email': 1
-          }
-        }
-      ];
-
-      return await this.aggregate(pipeline);
-    } catch (error) {
-      logger.error('Error getting orders with user details:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get order statistics
-   */
   async getOrderStats() {
     try {
       const pipeline = [
@@ -184,7 +106,7 @@ class OrderRepository extends BaseRepository {
               $sum: { $cond: [{ $eq: ['$status', ORDER_STATUS.PENDING] }, 1, 0] }
             },
             completedOrders: {
-              $sum: { $cond: [{ $eq: ['$status', ORDER_STATUS.COMPLETED] }, 1, 0] }
+              $sum: { $cond: [{ $eq: ['$status', ORDER_STATUS.DELIVERED] }, 1, 0] }
             }
           }
         }
@@ -198,9 +120,6 @@ class OrderRepository extends BaseRepository {
     }
   }
 
-  /**
-   * Get revenue by date range
-   */
   async getRevenueByDateRange(startDate, endDate) {
     try {
       const pipeline = [
@@ -234,25 +153,6 @@ class OrderRepository extends BaseRepository {
     }
   }
 
-  /**
-   * Get orders by product (for product analytics)
-   */
-  async getOrdersByProduct(productId) {
-    try {
-      const filter = {
-        'items.productId': this.toObjectId(productId)
-      };
-
-      return await this.findMany(filter, { sort: { createdAt: -1 } });
-    } catch (error) {
-      logger.error('Error getting orders by product:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Update order status with history tracking
-   */
   async updateOrderStatus(orderId, newStatus, note = '', updatedBy = 'SYSTEM') {
     try {
       const collection = this.getCollection();
@@ -286,15 +186,11 @@ class OrderRepository extends BaseRepository {
     }
   }
 
-  /**
-   * Generate unique order number
-   */
   async generateOrderNumber() {
     try {
       const date = new Date();
       const dateStr = date.toISOString().slice(0, 10).replace(/-/g, '');
       
-      // Get count of orders today
       const startOfDay = new Date(date.setHours(0, 0, 0, 0));
       const endOfDay = new Date(date.setHours(23, 59, 59, 999));
       

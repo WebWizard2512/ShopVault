@@ -4,11 +4,7 @@ const chalk = require('chalk');
 const dbManager = require('./config/database');
 const logger = require('./utils/logger');
 
-/**
- * Display Welcome Banner
- */
 function displayBanner() {
-  // Skip banner if called from seed script
   if (process.env.SKIP_BANNER) return;
   
   console.clear();
@@ -27,9 +23,6 @@ function displayBanner() {
   console.log('');
 }
 
-/**
- * Initialize Application
- */
 async function initializeApp() {
   try {
     displayBanner();
@@ -37,10 +30,8 @@ async function initializeApp() {
     logger.info('Starting ShopVault...');
     logger.info('Environment: ' + (process.env.NODE_ENV || 'development'));
     
-    // Connect to MongoDB
     await dbManager.connect();
     
-    // Verify connection
     const health = await dbManager.healthCheck();
     if (health.healthy) {
       logger.success(`Connected to database: ${health.database}`);
@@ -51,11 +42,9 @@ async function initializeApp() {
     logger.success('ShopVault initialized successfully!');
     console.log('');
     
-    // Start CLI
     const mainMenu = require('./cli/menus/mainMenu');
     await mainMenu.run();
     
-    // After menu exits, disconnect
     await dbManager.disconnect();
     
   } catch (error) {
@@ -65,9 +54,6 @@ async function initializeApp() {
   }
 }
 
-/**
- * Graceful Shutdown
- */
 async function shutdown() {
   logger.info('\nShutting down gracefully...');
   
@@ -81,11 +67,9 @@ async function shutdown() {
   }
 }
 
-// Handle shutdown signals
 process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);
 
-// Handle uncaught errors
 process.on('uncaughtException', (error) => {
   logger.error('Uncaught Exception:', error);
   shutdown();
@@ -96,5 +80,4 @@ process.on('unhandledRejection', (reason, promise) => {
   shutdown();
 });
 
-// Start the application
 initializeApp();

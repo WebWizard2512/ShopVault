@@ -1,5 +1,10 @@
 /**
- * Order Commands
+ * Order Commands - FIXED
+ * 
+ * Fixes:
+ * - Show valid status transitions only
+ * - Better error messages
+ * - Proper spinner handling
  */
 
 const inquirer = require('inquirer');
@@ -12,6 +17,23 @@ const { ORDER_STATUS } = require('../../config/constants');
 const Table = require('cli-table3');
 
 class OrderCommands {
+  /**
+   * Get valid next statuses based on current status
+   */
+  getValidNextStatuses(currentStatus) {
+    const validTransitions = {
+      [ORDER_STATUS.PENDING]: [ORDER_STATUS.CONFIRMED, ORDER_STATUS.CANCELLED],
+      [ORDER_STATUS.CONFIRMED]: [ORDER_STATUS.PROCESSING, ORDER_STATUS.CANCELLED],
+      [ORDER_STATUS.PROCESSING]: [ORDER_STATUS.SHIPPED, ORDER_STATUS.CANCELLED],
+      [ORDER_STATUS.SHIPPED]: [ORDER_STATUS.DELIVERED, ORDER_STATUS.CANCELLED],
+      [ORDER_STATUS.DELIVERED]: [ORDER_STATUS.REFUNDED],
+      [ORDER_STATUS.CANCELLED]: [],
+      [ORDER_STATUS.REFUNDED]: []
+    };
+
+    return validTransitions[currentStatus] || [];
+  }
+
   /**
    * Create new order
    */
@@ -43,8 +65,12 @@ class OrderCommands {
           {
             type: 'input',
             name: 'productId',
-            message: 'Product ID:',
-            validate: input => input.length > 0 || 'Product ID required'
+            message: 'Product ID (24 characters):',
+            validate: input => {
+              if (input.length !== 24) return 'Product ID must be 24 characters';
+              if (!/^[a-fA-F0-9]{24}$/.test(input)) return 'Invalid ID format';
+              return true;
+            }
           },
           {
             type: 'number',
@@ -129,7 +155,7 @@ class OrderCommands {
         },
         items,
         shippingAddress,
-        billingAddress: shippingAddress, // Same as shipping for simplicity
+        billingAddress: shippingAddress,
         payment: {
           method: paymentMethod
         },
@@ -164,13 +190,17 @@ class OrderCommands {
       const spinner = display.showLoading('Loading order...');
       
       let order;
-      if (orderInput.startsWith('ORD-')) {
-        order = await orderService.getOrderByNumber(orderInput);
-      } else {
-        order = await orderService.getOrderById(orderInput);
+      try {
+        if (orderInput.startsWith('ORD-')) {
+          order = await orderService.getOrderByNumber(orderInput);
+        } else {
+          order = await orderService.getOrderById(orderInput);
+        }
+        spinner.succeed('Order loaded');
+      } catch (error) {
+        spinner.fail('Failed to load order');
+        throw error;
       }
-      
-      spinner.stop();
 
       this.displayOrderDetails(order);
 
@@ -226,9 +256,11 @@ class OrderCommands {
   }
 
   /**
-   * Update order status
+   * Update order status - FIXED: Show only valid transitions
    */
   async updateOrderStatus() {
+    const spinner = display.showLoading('Loading order...');
+    
     try {
       const { orderInput } = await inquirer.prompt([{
         type: 'input',
@@ -244,15 +276,30 @@ class OrderCommands {
       } else {
         order = await orderService.getOrderById(orderInput);
       }
+      spinner.succeed('Order loaded');
 
       console.log(chalk.white(`\nCurrent Status: `) + this.getStatusBadge(order.status));
+
+      // Get valid next statuses
+      const validStatuses = this.getValidNextStatuses(order.status);
+
+      if (validStatuses.length === 0) {
+        display.displayWarning(`Order status ${order.status} cannot be changed anymore.`);
+        return;
+      }
+
+      console.log(chalk.yellow(`\n✓ Valid transitions from ${order.status}:`));
+      validStatuses.forEach(status => {
+        console.log(chalk.gray(`  → ${status}`));
+      });
+      console.log('');
 
       const { newStatus, note } = await inquirer.prompt([
         {
           type: 'list',
           name: 'newStatus',
           message: 'New Status:',
-          choices: Object.values(ORDER_STATUS)
+          choices: validStatuses
         },
         {
           type: 'input',
@@ -265,7 +312,7 @@ class OrderCommands {
       const { confirm } = await inquirer.prompt([{
         type: 'confirm',
         name: 'confirm',
-        message: `Update status to ${newStatus}?`,
+        message: `Update status from ${order.status} to ${newStatus}?`,
         default: true
       }]);
 
@@ -274,18 +321,19 @@ class OrderCommands {
         return;
       }
 
-      const spinner = display.showLoading('Updating status...');
+      const updateSpinner = display.showLoading('Updating status...');
       const updatedOrder = await orderService.updateOrderStatus(
         order._id.toString(),
         newStatus,
         note,
         'ADMIN'
       );
-      spinner.succeed('Status updated successfully!');
+      updateSpinner.succeed('Status updated successfully!');
 
       this.displayOrderDetails(updatedOrder);
 
     } catch (error) {
+      spinner.fail('Operation failed');
       display.displayError(error.message);
     }
   }

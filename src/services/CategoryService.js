@@ -1,26 +1,11 @@
-/**
- * Category Service
- * 
- * LEARNING NOTES:
- * Managing hierarchical data requires special care:
- * - Path calculation for breadcrumbs
- * - Level management for depth
- * - Cascading updates when moving categories
- * - Orphan prevention (can't delete parent with children)
- */
-
 const categoryRepository = require('../repositories/CategoryRepository');
 const { CategoryValidationSchema } = require('../models/Category');
 const logger = require('../utils/logger');
 const { ValidationError, NotFoundError, BusinessLogicError } = require('../utils/errorHandler');
 
 class CategoryService {
-  /**
-   * Create a new category
-   */
   async createCategory(categoryData) {
     try {
-      // Validate input
       const { error, value } = CategoryValidationSchema.validate(categoryData, {
         abortEarly: false,
         stripUnknown: true
@@ -31,13 +16,11 @@ class CategoryService {
         throw new ValidationError(`Validation failed: ${errors}`);
       }
 
-      // Check if slug already exists
       const existingCategory = await categoryRepository.findBySlug(value.slug);
       if (existingCategory) {
         throw new BusinessLogicError(`Category with slug '${value.slug}' already exists`);
       }
 
-      // If has parent, verify parent exists and calculate path/level
       let processedData = { ...value };
       
       if (value.parentId) {
@@ -53,7 +36,6 @@ class CategoryService {
         processedData.path = value.name;
       }
 
-      // Create category
       const category = await categoryRepository.create(processedData);
 
       logger.success(`Category created: ${category.name}`);
@@ -65,9 +47,6 @@ class CategoryService {
     }
   }
 
-  /**
-   * Get category by ID
-   */
   async getCategoryById(categoryId) {
     try {
       const category = await categoryRepository.findById(categoryId);
@@ -83,9 +62,6 @@ class CategoryService {
     }
   }
 
-  /**
-   * Get all root categories
-   */
   async getRootCategories() {
     try {
       return await categoryRepository.getRootCategories();
@@ -95,9 +71,6 @@ class CategoryService {
     }
   }
 
-  /**
-   * Get category with children
-   */
   async getCategoryWithChildren(categoryId) {
     try {
       const category = await categoryRepository.findById(categoryId);
@@ -117,9 +90,6 @@ class CategoryService {
     }
   }
 
-  /**
-   * Get full category tree
-   */
   async getCategoryTree() {
     try {
       return await categoryRepository.getCategoryTree();
@@ -129,9 +99,6 @@ class CategoryService {
     }
   }
 
-  /**
-   * Update category
-   */
   async updateCategory(categoryId, updateData) {
     try {
       const existingCategory = await categoryRepository.findById(categoryId);
@@ -139,7 +106,6 @@ class CategoryService {
         throw new NotFoundError('Category', categoryId);
       }
 
-      // If slug is being updated, check uniqueness
       if (updateData.slug && updateData.slug !== existingCategory.slug) {
         const slugExists = await categoryRepository.findBySlug(updateData.slug);
         if (slugExists) {
@@ -147,12 +113,10 @@ class CategoryService {
         }
       }
 
-      // If name is updated and has children, update their paths
       if (updateData.name && updateData.name !== existingCategory.name) {
         await this.updateChildrenPaths(categoryId, updateData.name);
       }
 
-      // Update category
       const updatedCategory = await categoryRepository.updateById(categoryId, updateData);
 
       logger.success(`Category updated: ${updatedCategory.name}`);
@@ -164,9 +128,6 @@ class CategoryService {
     }
   }
 
-  /**
-   * Delete category
-   */
   async deleteCategory(categoryId) {
     try {
       const category = await categoryRepository.findById(categoryId);
@@ -174,7 +135,6 @@ class CategoryService {
         throw new NotFoundError('Category', categoryId);
       }
 
-      // Check if category has children
       const children = await categoryRepository.getChildren(categoryId);
       if (children.length > 0) {
         throw new BusinessLogicError(
@@ -182,14 +142,12 @@ class CategoryService {
         );
       }
 
-      // Check if category has products
       if (category.productCount > 0) {
         throw new BusinessLogicError(
           `Cannot delete category with ${category.productCount} products. Move or delete products first.`
         );
       }
 
-      // Soft delete
       await categoryRepository.softDelete(categoryId);
 
       logger.success(`Category deleted: ${category.name}`);
@@ -201,58 +159,22 @@ class CategoryService {
     }
   }
 
-  /**
-   * Move category to new parent
-   */
-  async moveCategory(categoryId, newParentId) {
-    try {
-      const category = await categoryRepository.findById(categoryId);
-      if (!category) {
-        throw new NotFoundError('Category', categoryId);
-      }
-
-      // Can't move to itself
-      if (categoryId === newParentId) {
-        throw new BusinessLogicError('Cannot move category to itself');
-      }
-
-      // Can't move to one of its descendants
-      if (newParentId) {
-        const descendants = await categoryRepository.getDescendants(categoryId);
-        const isDescendant = descendants.some(d => d._id.toString() === newParentId);
-        
-        if (isDescendant) {
-          throw new BusinessLogicError('Cannot move category to one of its descendants');
-        }
-      }
-
-      // Perform move
-      await categoryRepository.moveCategory(categoryId, newParentId);
-
-      logger.success(`Category moved successfully`);
-      return await categoryRepository.findById(categoryId);
-
-    } catch (error) {
-      logger.error('Error moving category:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Search categories
-   */
   async searchCategories(searchTerm) {
     try {
-      return await categoryRepository.searchByName(searchTerm);
+      const regex = new RegExp(searchTerm, 'i');
+      return await categoryRepository.findMany(
+        {
+          name: regex,
+          isActive: true
+        },
+        { sort: { name: 1 } }
+      );
     } catch (error) {
       logger.error('Error searching categories:', error);
       throw error;
     }
   }
 
-  /**
-   * Update product count for category
-   */
   async updateProductCount(categoryId) {
     try {
       return await categoryRepository.updateProductCount(categoryId);
@@ -262,30 +184,6 @@ class CategoryService {
     }
   }
 
-  /**
-   * Get category statistics
-   */
-  async getCategoryStats() {
-    try {
-      const allCategories = await categoryRepository.findMany({ isActive: true });
-      const rootCategories = await categoryRepository.getRootCategories();
-
-      return {
-        total: allCategories.length,
-        rootCategories: rootCategories.length,
-        totalProducts: allCategories.reduce((sum, cat) => sum + (cat.productCount || 0), 0)
-      };
-    } catch (error) {
-      logger.error('Error getting category stats:', error);
-      throw error;
-    }
-  }
-
-  // ==================== HELPER METHODS ====================
-
-  /**
-   * Update paths for all children when parent name changes
-   */
   async updateChildrenPaths(categoryId, newName) {
     try {
       const category = await categoryRepository.findById(categoryId);

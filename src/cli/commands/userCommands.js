@@ -1,7 +1,3 @@
-/**
- * User Commands
- */
-
 const inquirer = require('inquirer');
 const chalk = require('chalk');
 const userService = require('../../services/UserService');
@@ -10,9 +6,6 @@ const { USER_ROLES } = require('../../config/constants');
 const Table = require('cli-table3');
 
 class UserCommands {
-  /**
-   * Create new user
-   */
   async createUser() {
     try {
       display.clearScreen();
@@ -83,9 +76,6 @@ class UserCommands {
     }
   }
 
-  /**
-   * List all users
-   */
   async listUsers() {
     try {
       display.clearScreen();
@@ -133,9 +123,6 @@ class UserCommands {
     }
   }
 
-  /**
-   * View user details
-   */
   async viewUser() {
     try {
       const { userId } = await inquirer.prompt([{
@@ -185,9 +172,6 @@ class UserCommands {
     }
   }
 
-  /**
-   * Manage wishlist
-   */
   async manageWishlist() {
     try {
       const { userId } = await inquirer.prompt([{
@@ -228,9 +212,6 @@ class UserCommands {
     }
   }
 
-  /**
-   * View wishlist
-   */
   async viewWishlist(userId) {
     try {
       const spinner = display.showLoading('Loading wishlist...');
@@ -272,9 +253,6 @@ class UserCommands {
     }
   }
 
-  /**
-   * Add to wishlist
-   */
   async addToWishlist(userId) {
     try {
       const { productId } = await inquirer.prompt([{
@@ -293,9 +271,6 @@ class UserCommands {
     }
   }
 
-  /**
-   * Remove from wishlist
-   */
   async removeFromWishlist(userId) {
     try {
       const { productId } = await inquirer.prompt([{
@@ -314,9 +289,6 @@ class UserCommands {
     }
   }
 
-  /**
-   * View user statistics
-   */
   async viewUserStats() {
     try {
       const spinner = display.showLoading('Calculating statistics...');

@@ -1,8 +1,3 @@
-/**
- * Main Menu - COMPLETE FIXED VERSION
- * All handlers implemented, no missing features
- */
-
 const inquirer = require('inquirer');
 const chalk = require('chalk');
 const figlet = require('figlet');
@@ -14,7 +9,7 @@ const display = require('../helpers/display');
 
 class MainMenu {
   /**
-   * Display banner (only once)
+   * Display banner
    */
   displayBanner() {
     console.clear();
@@ -49,7 +44,6 @@ class MainMenu {
       { name: '  👁️  View Product Details', value: 'view_product' },
       { name: '  ✏️  Update Product', value: 'update_product' },
       { name: '  🗑️  Delete Product', value: 'delete_product' },
-      { name: ' ', disabled: true },
       
       chalk.cyan('━━━ USER & WISHLIST ━━━'),
       { name: '  👤 Create User', value: 'create_user' },
@@ -57,7 +51,6 @@ class MainMenu {
       { name: '  👁️  View User', value: 'view_user' },
       { name: '  ❤️  Manage Wishlist', value: 'manage_wishlist' },
       { name: '  📊 User Statistics', value: 'user_stats' },
-      { name: ' ', disabled: true },
       
       chalk.cyan('━━━ ORDER MANAGEMENT ━━━'),
       { name: '  🛒 Create Order', value: 'create_order' },
@@ -66,13 +59,11 @@ class MainMenu {
       { name: '  ✏️  Update Order Status', value: 'update_order_status' },
       { name: '  ❌ Cancel Order', value: 'cancel_order' },
       { name: '  📊 Order Statistics', value: 'order_stats' },
-      { name: ' ', disabled: true },
       
       chalk.cyan('━━━ INVENTORY MANAGEMENT ━━━'),
       { name: '  📊 Manage Inventory', value: 'manage_inventory' },
       { name: '  ⚠️  Low Stock Alert', value: 'low_stock' },
       { name: '  📉 Out of Stock Products', value: 'out_of_stock' },
-      { name: ' ', disabled: true },
       
       chalk.cyan('━━━ ANALYTICS & REPORTS ━━━'),
       { name: '  📊 Dashboard Summary', value: 'dashboard' },
@@ -85,12 +76,6 @@ class MainMenu {
       { name: '  📊 Order Distribution', value: 'order_distribution' },
       { name: '  🏆 Top Selling Products', value: 'top_sellers' },
       { name: '  📈 Product Statistics', value: 'statistics' },
-      { name: ' ', disabled: true },
-      
-      chalk.cyan('━━━ CATEGORY MANAGEMENT ━━━'),
-      { name: '  📁 View Categories', value: 'view_categories' },
-      { name: '  🌳 Category Tree', value: 'category_tree' },
-      { name: ' ', disabled: true },
       
       chalk.cyan('━━━ SYSTEM ━━━'),
       { name: '  🌱 Seed Database', value: 'seed_database' },
@@ -218,14 +203,6 @@ class MainMenu {
           await productCommands.viewStatistics();
           break;
 
-        // CATEGORY MANAGEMENT
-        case 'view_categories':
-          await this.viewCategories();
-          break;
-        case 'category_tree':
-          await this.viewCategoryTree();
-          break;
-
         // SYSTEM
         case 'seed_database':
           await this.seedDatabase();
@@ -278,37 +255,6 @@ class MainMenu {
   }
 
   /**
-   * View categories
-   */
-  async viewCategories() {
-    const categoryService = require('../../services/CategoryService');
-    
-    const spinner = display.showLoading('Loading categories...');
-    const categories = await categoryService.getRootCategories();
-    spinner.stop();
-
-    display.displayCategories(categories);
-  }
-
-  /**
-   * View category tree
-   */
-  async viewCategoryTree() {
-    const categoryService = require('../../services/CategoryService');
-    
-    const spinner = display.showLoading('Building category tree...');
-    const tree = await categoryService.getCategoryTree();
-    spinner.stop();
-
-    console.log(chalk.cyan('\n╔══════════════════════════════════════════════════════════════════════╗'));
-    console.log(chalk.cyan('║') + chalk.bold.white('  CATEGORY TREE'.padEnd(68)) + chalk.cyan('║'));
-    console.log(chalk.cyan('╚══════════════════════════════════════════════════════════════════════╝\n'));
-
-    display.displayCategoryTree(tree);
-    console.log('');
-  }
-
-  /**
    * Seed database
    */
   async seedDatabase() {
@@ -348,7 +294,8 @@ class MainMenu {
     console.log(chalk.white('    ✓ Advanced search with filters'));
     console.log(chalk.white('    ✓ Real-time inventory management'));
     console.log(chalk.white('    ✓ Sales analytics and reports'));
-    console.log(chalk.white('    ✓ Hierarchical category system'));
+    console.log(chalk.white('    ✓ Order management with status tracking'));
+    console.log(chalk.white('    ✓ User and wishlist management'));
     console.log(chalk.white('    ✓ Low stock alerts'));
     console.log(chalk.white('    ✓ Interactive CLI interface'));
     console.log('');
@@ -377,7 +324,6 @@ class MainMenu {
       keepRunning = await this.handleAction(action);
     }
 
-    // Exit message
     display.clearScreen();
     console.log(chalk.cyan('\n╔══════════════════════════════════════════════════════════════════════╗'));
     console.log(chalk.cyan('║') + chalk.bold.white('  THANK YOU FOR USING SHOPVAULT!'.padEnd(68)) + chalk.cyan('║'));

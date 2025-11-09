@@ -1,26 +1,15 @@
 /**
- * Product Commands - CLI Operations
- * 
- * LEARNING NOTES - CLI DESIGN:
- * Good CLI is about UX:
- * - Clear prompts
- * - Validation feedback
- * - Progress indicators
- * - Beautiful output
+ * Product Commands (CLEANED - No Console Logs)
  */
 
 const inquirer = require('inquirer');
 const productService = require('../../services/ProductService');
 const categoryService = require('../../services/CategoryService');
 const display = require('../helpers/display');
-const logger = require('../../utils/logger');
 const chalk = require('chalk');
 const { PRODUCT_STATUS } = require('../../config/constants');
 
 class ProductCommands {
-  /**
-   * List all products with IDs visible
-   */
   async listAllProducts() {
     try {
       display.clearScreen();
@@ -37,7 +26,6 @@ class ProductCommands {
         return;
       }
 
-      // Display with full IDs visible
       const Table = require('cli-table3');
       const table = new Table({
         head: [
@@ -48,8 +36,7 @@ class ProductCommands {
           chalk.cyan('Stock'),
           chalk.cyan('Status')
         ],
-        colWidths: [28, 18, 30, 12, 10, 15],
-        wordWrap: true
+        colWidths: [28, 18, 30, 12, 10, 15]
       });
 
       result.products.forEach(product => {
@@ -74,7 +61,6 @@ class ProductCommands {
       console.log(table.toString() + '\n');
       console.log(chalk.gray(`  Total: ${result.total} products\n`));
 
-      // Ask if user wants to view details
       const { viewDetails } = await inquirer.prompt([{
         type: 'confirm',
         name: 'viewDetails',
@@ -102,9 +88,6 @@ class ProductCommands {
     }
   }
 
-  /**
-   * Create new product
-   */
   async createProduct() {
     try {
       display.clearScreen();
@@ -112,7 +95,6 @@ class ProductCommands {
       console.log(chalk.cyan('║') + chalk.bold.white('  CREATE NEW PRODUCT'.padEnd(68)) + chalk.cyan('║'));
       console.log(chalk.cyan('╚══════════════════════════════════════════════════════════════════════╝\n'));
 
-      // Get categories for selection
       const categories = await categoryService.getRootCategories();
       const categoryChoices = categories.map(cat => ({
         name: cat.name,
@@ -184,7 +166,6 @@ class ProductCommands {
         }
       ]);
 
-      // Prepare product data
       const productData = {
         ...answers,
         inventory: {
@@ -194,7 +175,6 @@ class ProductCommands {
 
       delete productData.quantity;
 
-      // Create product
       const spinner = display.showLoading('Creating product...');
       const product = await productService.createProduct(productData);
       spinner.succeed('Product created successfully!');
@@ -206,9 +186,6 @@ class ProductCommands {
     }
   }
 
-  /**
-   * Search products
-   */
   async searchProducts() {
     try {
       display.clearScreen();
@@ -254,18 +231,15 @@ class ProductCommands {
         }
       ]);
 
-      // Build search parameters
       const searchParams = {
         limit: answers.limit || 10,
         page: 1
       };
 
-      // Only add query if not empty
       if (answers.query && answers.query.trim() !== '') {
         searchParams.query = answers.query.trim();
       }
 
-      // Only add price filters if provided
       if (answers.minPrice !== null && !isNaN(answers.minPrice)) {
         searchParams.minPrice = answers.minPrice;
       }
@@ -273,7 +247,6 @@ class ProductCommands {
         searchParams.maxPrice = answers.maxPrice;
       }
 
-      // Only add status filter if not "All"
       if (answers.status) {
         searchParams.status = answers.status;
       }
@@ -284,7 +257,6 @@ class ProductCommands {
 
       display.displaySearchResults(result);
 
-      // Ask if user wants to view details
       const { viewDetails } = await inquirer.prompt([{
         type: 'confirm',
         name: 'viewDetails',
@@ -301,9 +273,6 @@ class ProductCommands {
     }
   }
 
-  /**
-   * View product by ID
-   */
   async viewProduct() {
     try {
       const { productId } = await inquirer.prompt([{
@@ -323,9 +292,6 @@ class ProductCommands {
     }
   }
 
-  /**
-   * Update product
-   */
   async updateProduct() {
     try {
       display.clearScreen();
@@ -335,14 +301,12 @@ class ProductCommands {
         message: 'Enter Product ID to update:'
       }]);
 
-      // Load existing product
       const spinner = display.showLoading('Loading product...');
       const product = await productService.getProductById(productId);
       spinner.stop();
 
       display.displayProductDetails(product);
 
-      // Ask what to update
       const { fields } = await inquirer.prompt([{
         type: 'checkbox',
         name: 'fields',
@@ -362,7 +326,6 @@ class ProductCommands {
         return;
       }
 
-      // Collect new values
       const updates = {};
       
       for (const field of fields) {
@@ -432,7 +395,6 @@ class ProductCommands {
         }
       }
 
-      // Confirm update
       const { confirm } = await inquirer.prompt([{
         type: 'confirm',
         name: 'confirm',
@@ -445,7 +407,6 @@ class ProductCommands {
         return;
       }
 
-      // Update product
       const updateSpinner = display.showLoading('Updating product...');
       const updatedProduct = await productService.updateProduct(productId, updates);
       updateSpinner.succeed('Product updated successfully!');
@@ -457,9 +418,6 @@ class ProductCommands {
     }
   }
 
-  /**
-   * Delete product
-   */
   async deleteProduct() {
     try {
       const { productId } = await inquirer.prompt([{
@@ -468,14 +426,12 @@ class ProductCommands {
         message: 'Enter Product ID to delete:'
       }]);
 
-      // Load product
       const spinner = display.showLoading('Loading product...');
       const product = await productService.getProductById(productId);
       spinner.stop();
 
       display.displayProductDetails(product);
 
-      // Confirm deletion
       const { confirm } = await inquirer.prompt([{
         type: 'confirm',
         name: 'confirm',
@@ -488,7 +444,6 @@ class ProductCommands {
         return;
       }
 
-      // Delete
       const deleteSpinner = display.showLoading('Deleting product...');
       await productService.deleteProduct(productId);
       deleteSpinner.succeed('Product deleted successfully!');
@@ -498,9 +453,6 @@ class ProductCommands {
     }
   }
 
-  /**
-   * Manage inventory
-   */
   async manageInventory() {
     try {
       const { productId } = await inquirer.prompt([{
@@ -550,9 +502,6 @@ class ProductCommands {
     }
   }
 
-  /**
-   * View low stock products
-   */
   async viewLowStock() {
     try {
       const { threshold } = await inquirer.prompt([{
@@ -573,9 +522,6 @@ class ProductCommands {
     }
   }
 
-  /**
-   * View top sellers
-   */
   async viewTopSellers() {
     try {
       const { limit } = await inquirer.prompt([{
@@ -596,9 +542,6 @@ class ProductCommands {
     }
   }
 
-  /**
-   * View product statistics
-   */
   async viewStatistics() {
     try {
       const spinner = display.showLoading('Calculating statistics...');
@@ -612,9 +555,6 @@ class ProductCommands {
     }
   }
 
-  /**
-   * Helper: Select and view product from list
-   */
   async selectAndViewProduct(products) {
     const choices = products.map(p => ({
       name: `${p.name} (${p.sku})`,

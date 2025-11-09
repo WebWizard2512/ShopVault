@@ -1,39 +1,22 @@
-/**
- * Analytics Service
- * 
- * LEARNING NOTES - ADVANCED AGGREGATIONS:
- * This is where MongoDB SHINES!
- * - Complex aggregation pipelines
- * - Multi-collection joins
- * - Time-series analysis
- * - Revenue calculations
- */
-
 const dbManager = require('../config/database');
 const { COLLECTIONS, ORDER_STATUS } = require('../config/constants');
 const logger = require('../utils/logger');
 const dayjs = require('dayjs');
 
 class AnalyticsService {
-  /**
-   * Get dashboard summary
-   */
   async getDashboardSummary() {
     try {
       const db = dbManager.getDb();
 
-      // Get current month dates
       const startOfMonth = dayjs().startOf('month').toDate();
       const endOfMonth = dayjs().endOf('month').toDate();
 
-      // Parallel queries for performance
       const [
         productStats,
         orderStats,
         monthlyRevenue,
         topProducts
       ] = await Promise.all([
-        // Product statistics
         db.collection(COLLECTIONS.PRODUCTS).aggregate([
           { $match: { isActive: true, deletedAt: null } },
           {
@@ -51,7 +34,6 @@ class AnalyticsService {
           }
         ]).toArray(),
 
-        // Order statistics
         db.collection(COLLECTIONS.ORDERS).aggregate([
           {
             $group: {
@@ -68,7 +50,6 @@ class AnalyticsService {
           }
         ]).toArray(),
 
-        // Monthly revenue
         db.collection(COLLECTIONS.ORDERS).aggregate([
           {
             $match: {
@@ -85,7 +66,6 @@ class AnalyticsService {
           }
         ]).toArray(),
 
-        // Top 5 products
         db.collection(COLLECTIONS.PRODUCTS).aggregate([
           {
             $match: {
@@ -119,14 +99,10 @@ class AnalyticsService {
     }
   }
 
-  /**
-   * Get sales by period
-   */
   async getSalesByPeriod(period = 'month', startDate = null, endDate = null) {
     try {
       const db = dbManager.getDb();
 
-      // Determine date range
       let start, end;
       if (startDate && endDate) {
         start = new Date(startDate);
@@ -170,16 +146,13 @@ class AnalyticsService {
               day: { $dayOfMonth: '$createdAt' }
             },
             revenue: { $sum: '$pricing.total' },
-            orderCount: { $sum: 1 },
-            avgOrderValue: { $avg: '$pricing.total' }
+            orderCount: { $sum: 1 }
           }
         },
         { $sort: { '_id.year': 1, '_id.month': 1, '_id.day': 1 } }
       ];
 
-      const result = await db.collection(COLLECTIONS.ORDERS).aggregate(pipeline).toArray();
-
-      return result;
+      return await db.collection(COLLECTIONS.ORDERS).aggregate(pipeline).toArray();
 
     } catch (error) {
       logger.error('Error getting sales by period:', error);
@@ -187,9 +160,6 @@ class AnalyticsService {
     }
   }
 
-  /**
-   * Get category performance
-   */
   async getCategoryPerformance() {
     try {
       const db = dbManager.getDb();
@@ -226,9 +196,6 @@ class AnalyticsService {
     }
   }
 
-  /**
-   * Get customer analytics
-   */
   async getCustomerAnalytics() {
     try {
       const db = dbManager.getDb();
@@ -258,9 +225,6 @@ class AnalyticsService {
     }
   }
 
-  /**
-   * Get inventory value
-   */
   async getInventoryValue() {
     try {
       const db = dbManager.getDb();
@@ -286,9 +250,6 @@ class AnalyticsService {
     }
   }
 
-  /**
-   * Get order status distribution
-   */
   async getOrderStatusDistribution() {
     try {
       const db = dbManager.getDb();
@@ -312,9 +273,6 @@ class AnalyticsService {
     }
   }
 
-  /**
-   * Get revenue trends (last 7 days)
-   */
   async getRevenueTrends() {
     try {
       const db = dbManager.getDb();
@@ -344,7 +302,6 @@ class AnalyticsService {
 
       const result = await db.collection(COLLECTIONS.ORDERS).aggregate(pipeline).toArray();
 
-      // Format for easy consumption
       return result.map(r => ({
         date: `${r._id.year}-${String(r._id.month).padStart(2, '0')}-${String(r._id.day).padStart(2, '0')}`,
         revenue: r.revenue,
@@ -357,9 +314,6 @@ class AnalyticsService {
     }
   }
 
-  /**
-   * Get inventory turnover
-   */
   async getInventoryTurnover() {
     try {
       const db = dbManager.getDb();
